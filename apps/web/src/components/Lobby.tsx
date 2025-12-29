@@ -17,11 +17,13 @@ export const Lobby = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
     const [matches, setMatches] = useState<Match[]>([]);
+    const [activeMatches, setActiveMatches] = useState<Match[]>([]);
     const [loading, setLoading] = useState(false);
 
     const fetchMatches = async () => {
         setLoading(true);
-        const { data, error } = await supabase
+        // Fetch waiting matches
+        const { data: waitingData, error: waitingError } = await supabase
             .from('matches')
             .select(`
                 *,
@@ -30,15 +32,27 @@ export const Lobby = () => {
             .eq('status', 'waiting')
             .order('created_at', { ascending: false });
 
-        setLoading(false);
+        if (waitingError) console.error('Error fetching waiting matches:', waitingError);
+        else if (waitingData) setMatches(waitingData as any);
 
-        if (error) {
-            console.error('Error fetching matches:', error);
-            // Optional: Set an error state to display to user
-        } else if (data) {
-            // Transform data to match interface if needed, primarily handling the join
-            setMatches(data as any);
+        // Fetch MY active matches (Reconnect)
+        if (user) {
+            const { data: activeData, error: activeError } = await supabase
+                .from('matches')
+                .select(`
+                    *,
+                    player1:player1_id (username),
+                    player2:player2_id (username)
+                `)
+                .eq('status', 'playing')
+                .or(`player1_id.eq.${user.id},player2_id.eq.${user.id}`)
+                .order('created_at', { ascending: false });
+
+            if (activeError) console.error('Error fetching active matches:', activeError);
+            else if (activeData) setActiveMatches(activeData as any);
         }
+
+        setLoading(false);
     };
 
     useEffect(() => {
@@ -59,7 +73,7 @@ export const Lobby = () => {
         return () => {
             supabase.removeChannel(channel);
         };
-    }, []);
+    }, [user]); // Add user dep so active matches fetch works
 
     const createMatch = async () => {
         if (!user) return;
@@ -122,7 +136,45 @@ export const Lobby = () => {
                 </div>
             </div>
 
+            {/* Active Games Section */}
+            {activeMatches.length > 0 && (
+                <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                        Your Active Games
+                    </h3>
+                    <div className="grid gap-3">
+                        {activeMatches.map((match: any) => {
+                            const opponentName = match.player1_id === user?.id
+                                ? match.player2?.username
+                                : match.player1?.username;
+
+                            return (
+                                <div key={match.id} className="flex justify-between items-center p-4 bg-green-50 dark:bg-green-900/10 border-l-4 border-green-500 rounded-lg shadow-sm">
+                                    <div>
+                                        <div className="font-bold text-zinc-800 dark:text-zinc-100">
+                                            vs {opponentName || 'Unknown Player'}
+                                        </div>
+                                        <div className="text-xs text-zinc-500">
+                                            Last move: {new Date(match.created_at).toLocaleTimeString()}
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => navigate(`/online/${match.id}`)}
+                                        className="px-4 py-1.5 bg-green-600 text-white text-sm font-bold rounded-full hover:bg-green-700 transition-transform hover:scale-105 shadow-md"
+                                    >
+                                        RECONNECT
+                                    </button>
+                                </div>
+                            )
+                        })}
+                    </div>
+                    <hr className="border-t border-zinc-200 dark:border-zinc-800" />
+                </div>
+            )}
+
             <div className="grid gap-4">
+                <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Waiting for Players</h3>
                 {matches.length === 0 ? (
                     <div className="p-8 text-center text-zinc-500 bg-zinc-50 dark:bg-zinc-900 rounded-xl border border-dashed border-zinc-300 dark:border-zinc-700">
                         No waiting matches found. Create one!

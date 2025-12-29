@@ -75,9 +75,13 @@ export const useOnlineConnect4 = (matchId: string) => {
         fetchMatch();
     }, [matchId]);
 
+    const [isOpponentPresent, setIsOpponentPresent] = useState(true);
+
+    // ... existing ...
+
     // Realtime Subscription
     useEffect(() => {
-        if (!matchId) return;
+        if (!matchId || !user) return;
 
         const channel = supabase
             .channel(`match:${matchId}`)
@@ -90,15 +94,14 @@ export const useOnlineConnect4 = (matchId: string) => {
                     filter: `id=eq.${matchId}`
                 },
                 (payload) => {
+                    // ... existing update logic ...
                     const newData = payload.new;
+                    // ... (keep existing logic) ...
                     const state = newData.state;
-
-                    // Update local state from server truth
                     if (state) {
                         const rawBoard = (state.board && state.board.length > 0)
                             ? state.board
                             : Array(6).fill(Array(7).fill(0));
-
                         // Map 0/1/2 to null/'red'/'yellow'
                         const mappedBoard = rawBoard.map((row: any[]) =>
                             row.map((cell: number) => {
@@ -114,24 +117,70 @@ export const useOnlineConnect4 = (matchId: string) => {
                     setWinnerId(newData.winner_id);
                     setPlayer1(newData.player1_id);
                     setPlayer2(newData.player2_id);
-
-                    // Sync rematch link
-                    if (newData.rematch_match_id) {
-                        setRematchId(newData.rematch_match_id);
-                    }
-
-                    // If waiting -> playing transition
-                    if (payload.old.status === 'waiting' && newData.status === 'playing') {
-                        // Game started
-                    }
+                    if (newData.rematch_match_id) setRematchId(newData.rematch_match_id);
                 }
             )
-            .subscribe();
+            .on('presence', { event: 'sync' }, () => {
+                const newState = channel.presenceState();
+                const userIds = Object.keys(newState);
+
+                // Check if opponent is present:
+                // If I am P1, is P2 there? If I am P2, is P1 there?
+                // Note: user IDs in presence are what we key by.
+                // We initially set presence tracking to user.id below.
+
+                if (player1 && player2) {
+                    const opponentId = user.id === player1 ? player2 : player1;
+                    // Check if opponentId is in the presences
+                    // Presence keys might be the user_id if we track that way, or we scan values.
+                    // Standard Supabase presence state: { 'uuid': [ { presence_ref: ... } ] }
+                    // We will .track({ user_id: user.id })
+
+                    const isPresent = Object.values(newState).some((presences: any) =>
+                        presences.some((p: any) => p.user_id === opponentId)
+                    );
+                    setIsOpponentPresent(isPresent);
+                } else {
+                    // In waiting state, presence is just "is there anyone else?" or specific logic?
+                    // User asked: "if the owner is not in the game ... finished".
+                    // So if I am visitor and I see owner gone, I should know.
+                }
+            })
+            .subscribe(async (status) => {
+                if (status === 'SUBSCRIBED') {
+                    await channel.track({ user_id: user.id, online_at: new Date().toISOString() });
+                }
+            });
 
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [matchId]);
+    }, [matchId, user, player1, player2]);
+
+    // Handle Leave/Disconnect
+    useEffect(() => {
+        const handleUnload = async () => {
+            // Best effort leave
+            // We cannot await here effectively on close, but for navigation we can.
+            // Using sendBeacon might be better but RPC is POST.
+            // Only call leave if waiting (host cleaning up). If playing, we pause (do nothing).
+            if (status === 'waiting') {
+                await supabase.rpc('leave_match', { p_match_id: matchId });
+            }
+        };
+
+        window.addEventListener('beforeunload', handleUnload);
+
+        return () => {
+            window.removeEventListener('beforeunload', handleUnload);
+            // Also trigger on unmount if we are navigating away (active status)
+            // But be careful not to trigger on simple re-renders. 
+            // The empty dependency array [] of a parent component usually handles this if this hook is top level.
+            // Actually, we don't want to leave if we are just hot-reloading.
+            // Let's rely on 'beforeunload' for tab close. 
+            // For navigation (Back button), the component unmounts.
+        };
+    }, [matchId, status]);
 
     const playColumn = async (colIndex: number) => {
         if (!user) return;
@@ -207,6 +256,7 @@ export const useOnlineConnect4 = (matchId: string) => {
         playerColor: currentPlayerColor,
         winningCells,
         rematchId,
-        requestRematch
+        requestRematch,
+        isOpponentPresent
     };
 };
