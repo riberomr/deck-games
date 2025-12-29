@@ -117,7 +117,14 @@ export const Lobby = () => {
     return (
         <div className="flex flex-col gap-6 w-full max-w-2xl mx-auto p-4">
             <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">Lobby</h2>
+                <div className="flex items-center gap-4">
+                    <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">Lobby</h2>
+                    {user && (
+                        <div className="text-sm text-zinc-500">
+                            Logged as: <span className="font-semibold">{user.email?.split('@')[0]}</span>
+                        </div>
+                    )}
+                </div>
                 <div className="flex gap-2">
                     <button
                         onClick={fetchMatches}
@@ -132,6 +139,12 @@ export const Lobby = () => {
                         className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
                     >
                         {loading ? 'Creating...' : 'Create Match'}
+                    </button>
+                    <button
+                        onClick={() => supabase.auth.signOut()}
+                        className="px-4 py-2 bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
+                    >
+                        Sign Out
                     </button>
                 </div>
             </div>

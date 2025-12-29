@@ -11,7 +11,7 @@ export const Disc = ({ color, isWinning, isDimmed }: DiscProps) => {
         <motion.div
             initial={{ y: -300, opacity: 0 }}
             animate={{ y: 0, opacity: isDimmed ? 0.5 : 1 }}
-            transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 25 }}
             className={`relative w-full h-full rounded-full shadow-inner ${color === 'red' ? 'bg-red-500' : 'bg-yellow-400'
                 } ${isWinning ? 'ring-4 ring-white z-10' : ''}`}
         >

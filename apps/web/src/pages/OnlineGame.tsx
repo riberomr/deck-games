@@ -25,7 +25,8 @@ export const OnlineGame = () => {
         isMyTurn,
         playerColor,
         rematchId,
-        requestRematch
+        requestRematch,
+        isOpponentPresent
     } = useOnlineConnect4(matchId);
 
     if (isLoading) {
@@ -121,7 +122,23 @@ export const OnlineGame = () => {
             )}
 
             {status !== 'waiting' && (
-                <div className="flex flex-col items-center">
+                <div className="flex flex-col items-center relative">
+                    {/* Game Paused Overlay */}
+                    {status === 'playing' && !isOpponentPresent && (
+                        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm rounded-xl py-20">
+                            <div className="bg-white dark:bg-zinc-800 p-8 rounded-2xl shadow-2xl text-center max-w-sm mx-4 animate-bounce-in">
+                                <div className="text-4xl mb-4">⚠️</div>
+                                <h3 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-2">Opponent Disconnected</h3>
+                                <p className="text-zinc-500 dark:text-zinc-400 mb-6">
+                                    Waiting for them to reconnect...
+                                </p>
+                                <div className="animate-pulse text-zinc-400 text-sm">
+                                    The game is paused.
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     <BoardUI
                         board={board}
                         currentPlayer={currentPlayer}

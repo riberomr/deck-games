@@ -1,5 +1,5 @@
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../auth/AuthProvider';
 import { CellChecker, Player, GameStatus } from '@repo/connect4';
@@ -79,6 +79,17 @@ export const useOnlineConnect4 = (matchId: string) => {
 
     // ... existing ...
 
+    // Refs for safe access in Realtime callbacks
+    const p1Ref = useRef(player1);
+    const p2Ref = useRef(player2);
+    const userRef = useRef(user);
+
+    useEffect(() => {
+        p1Ref.current = player1;
+        p2Ref.current = player2;
+        userRef.current = user;
+    }, [player1, player2, user]);
+
     // Realtime Subscription
     useEffect(() => {
         if (!matchId || !user) return;
@@ -94,15 +105,19 @@ export const useOnlineConnect4 = (matchId: string) => {
                     filter: `id=eq.${matchId}`
                 },
                 (payload) => {
-                    // ... existing update logic ...
+                    // ... (existing update logic) ...
+                    // Note: We can leave this as is, but we need to ensure the effect doesn't constantly re-run
+                    // if we want presence to be stable. 
+                    // HOWEVER, existing logic relies on rebuilding 'channel' when p1/p2 changes?
+                    // No, p1/p2 are in dependency array.
+                    // This causes channel to Re-connect every time player info updates (rare, but happens on join).
+
                     const newData = payload.new;
-                    // ... (keep existing logic) ...
                     const state = newData.state;
                     if (state) {
                         const rawBoard = (state.board && state.board.length > 0)
                             ? state.board
                             : Array(6).fill(Array(7).fill(0));
-                        // Map 0/1/2 to null/'red'/'yellow'
                         const mappedBoard = rawBoard.map((row: any[]) =>
                             row.map((cell: number) => {
                                 if (cell === 1) return 'red';
@@ -115,6 +130,7 @@ export const useOnlineConnect4 = (matchId: string) => {
                     }
                     setStatus(newData.status as GameStatus);
                     setWinnerId(newData.winner_id);
+                    // Updating state triggers re-render, updating refs.
                     setPlayer1(newData.player1_id);
                     setPlayer2(newData.player2_id);
                     if (newData.rematch_match_id) setRematchId(newData.rematch_match_id);
@@ -122,28 +138,18 @@ export const useOnlineConnect4 = (matchId: string) => {
             )
             .on('presence', { event: 'sync' }, () => {
                 const newState = channel.presenceState();
-                const userIds = Object.keys(newState);
 
-                // Check if opponent is present:
-                // If I am P1, is P2 there? If I am P2, is P1 there?
-                // Note: user IDs in presence are what we key by.
-                // We initially set presence tracking to user.id below.
+                const currentP1 = p1Ref.current;
+                const currentP2 = p2Ref.current;
+                const currentUser = userRef.current;
 
-                if (player1 && player2) {
-                    const opponentId = user.id === player1 ? player2 : player1;
-                    // Check if opponentId is in the presences
-                    // Presence keys might be the user_id if we track that way, or we scan values.
-                    // Standard Supabase presence state: { 'uuid': [ { presence_ref: ... } ] }
-                    // We will .track({ user_id: user.id })
+                if (currentP1 && currentP2 && currentUser) {
+                    const opponentId = currentUser.id === currentP1 ? currentP2 : currentP1;
 
                     const isPresent = Object.values(newState).some((presences: any) =>
                         presences.some((p: any) => p.user_id === opponentId)
                     );
                     setIsOpponentPresent(isPresent);
-                } else {
-                    // In waiting state, presence is just "is there anyone else?" or specific logic?
-                    // User asked: "if the owner is not in the game ... finished".
-                    // So if I am visitor and I see owner gone, I should know.
                 }
             })
             .subscribe(async (status) => {
@@ -155,7 +161,7 @@ export const useOnlineConnect4 = (matchId: string) => {
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [matchId, user, player1, player2]);
+    }, [matchId, user]); // Removed player1, player2 from dependencies to avoid reconnect loops
 
     // Handle Leave/Disconnect
     useEffect(() => {
