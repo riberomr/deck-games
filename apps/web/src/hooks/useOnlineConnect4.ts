@@ -185,13 +185,6 @@ export const useOnlineConnect4 = (matchId: string) => {
     const playColumn = async (colIndex: number) => {
         if (!user) return;
 
-        console.log('Attempting Move:', {
-            colIndex,
-            userId: user.id,
-            currentTurnId,
-            isMyTurn: user.id === currentTurnId
-        });
-
         if (currentTurnId !== user.id) {
             console.warn('Blocked Move: Not your turn (Frontend Check)');
             return;

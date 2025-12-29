@@ -5,3 +5,4 @@ dist
 .next
 .env
 .env.local
+supabase
