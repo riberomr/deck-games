@@ -14,6 +14,15 @@ export const OnlineGame = () => {
     // Safety check
     if (!matchId) return <div>Invalid Match ID</div>;
 
+    const surrenderGame = async () => {
+        if (!confirm('Are you sure you want to surrender? You will lose this game.')) return;
+
+        const { error } = await supabase.rpc('surrender_match', { p_match_id: matchId });
+        if (error) {
+            alert(error.message);
+        }
+    };
+
     const {
         board,
         currentPlayer,
@@ -162,6 +171,13 @@ export const OnlineGame = () => {
                                     Waiting for opponent...
                                 </div>
                             )}
+
+                            <button
+                                onClick={surrenderGame}
+                                className="mt-4 text-xs text-red-500 hover:text-red-700 underline decoration-red-500/30 hover:decoration-red-700"
+                            >
+                                Surrender / Forfeit
+                            </button>
                         </div>
                     )}
 
