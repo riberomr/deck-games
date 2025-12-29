@@ -1,0 +1,6 @@
+{
+    "extends": "../../ui/tsconfig.json",
+    "include": [
+        "src"
+    ]
+}
