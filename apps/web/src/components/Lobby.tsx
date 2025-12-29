@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../auth/AuthProvider';
 import { useNavigate } from 'react-router-dom';
-import { useNotifications } from '../hooks/useNotifications';
+// import { useNotifications } from '../hooks/useNotifications';
 
 interface Match {
     id: string;
@@ -15,7 +15,7 @@ interface Match {
 }
 
 export const Lobby = () => {
-    const { permission, requestPermission, subscribeToLobby } = useNotifications();
+    // const { permission, requestPermission, subscribeToLobby } = useNotifications();
     const { user } = useAuth();
     const navigate = useNavigate();
     const [matches, setMatches] = useState<Match[]>([]);
@@ -97,7 +97,7 @@ export const Lobby = () => {
             setLoading(false);
         } else if (data) {
             // Subscribe to notifications for this match (I am the host)
-            subscribeToLobby(data.id);
+            // subscribeToLobby(data.id);
             navigate(`/online/${data.id}`);
         }
     };
@@ -150,14 +150,14 @@ export const Lobby = () => {
                     >
                         Sign Out
                     </button>
-                    {!permission && (
+                    {/* {!permission && (
                         <button
                             onClick={requestPermission}
                             className="bg-yellow-500 text-white px-4 py-2 rounded shadow-lg flex items-center gap-2"
                         >
                             🔔 Activar Notificaciones
                         </button>
-                    )}
+                    )} */}
                 </div>
             </div>
 
