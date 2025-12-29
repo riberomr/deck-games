@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 
 export type Player = 'red' | 'yellow';
 export type CellChecker = Player | null;
-export type GameStatus = 'playing' | 'won' | 'draw';
+export type GameStatus = 'waiting' | 'playing' | 'won' | 'draw' | 'abandoned';
 
 export interface GameState {
     board: CellChecker[][];

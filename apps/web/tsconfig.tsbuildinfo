@@ -1,1 +1,1 @@
-{"root":["./src/App.tsx","./src/main.tsx"],"version":"5.9.3"}
+{"root":["./src/App.tsx","./src/main.tsx","./src/auth/AuthProvider.tsx","./src/auth/Login.tsx","./src/components/Lobby.tsx","./src/hooks/useOnlineConnect4.ts","./src/lib/supabase.ts","./src/pages/OnlineGame.tsx"],"version":"5.9.3"}
