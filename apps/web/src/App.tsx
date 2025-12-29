@@ -103,9 +103,12 @@ const Home = () => {
     );
 };
 
+import { ReloadPrompt } from './components/ReloadPrompt';
+
 function App() {
     return (
         <AuthProvider>
+            <ReloadPrompt />
             <BrowserRouter>
                 <Layout>
                     <Suspense fallback={
